@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Interdigitating Videos by SewnIn</title>
+    <script src="https://www.youtube.com/iframe_api"></script>
+    <style>
+        .container {
+            display: flex;
+        }
+
+        #videoContainer {
+            flex-grow: 4; /* Increase to allow video to take more space */
+            position: relative;
+            /* padding-bottom: 56.25%; /* 16:9 aspect ratio, adjust if a different ratio is desired */
+            height: 100%;
+            width: 100%; /* Increase width as needed */
+        }
+
+        #videoPlayer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ... rest of your CSS ... */
+
+
+        #controlsContainer {
+            overflow: hidden;
+            transition: all 0.5s ease;
+            width: 0; /* Initially collapsed */
+            padding: 0;
+        }
+
+            #controlsContainer.expanded {
+                width: 300px; /* Adjust as needed */
+                padding-left: 10px;
+            }
+
+        #videoPlayer {
+            width: 100%;
+            height: 650px; /* Adjust as needed */
+        }
+
+        #controlsContainer {
+            /* Styles for the expanded state */
+            width: 300px; /* Adjust as needed */
+            padding-left: 10px;
+            transition: all 0.5s ease;
+            /* Other styles as needed */
+        }
+
+            #controlsContainer.collapsed {
+                /* Styles for the collapsed state */
+                width: 0;
+                padding: 0;
+                overflow: hidden;
+            }
+
+        .small-text {
+            font-size: 8px; /* You can adjust this value as needed */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="videoContainer">
+            <div id="videoPlayer"></div>
+            <div id="videoPlaceholder">CUSTOM INFOMERCIAL by SewnIn - Videos will play here.</div>
+
+        </div>
+
+        <button id="toggleControls">⇉</button>
+
+        <div id="controlsContainer">
+            <!-- Your controls here -->
+            <div>
+                CUSTOM INFOMERCIAL <br /> by SewnIn<br /><br />
+                POCUS EDITION<br /><br />
+                Watch TV - guilt free! Only works with you tube - note some you tube videos restricted only to watch on you tube.
+            </div>
+            <div>
+                <br />
+                <label for="funVideoInput">Enter Fun Video ID:</label>
+                <input type="text" id="funVideoInput" placeholder="e.g., DxL2HoqLbyA">
+            </div>
+
+            <div>
+                <br />
+                Educational: <br />
+                <input type="radio" id="playlistVideo" name="videoSource" value="playlist" checked>
+                <label for="playlistVideo">Use Ultrasound Playlist</label><br />
+                <input type="radio" id="customVideo" name="videoSource" value="custom">
+                <label for="customVideo">Or Your Video:</label>
+            </div>
+
+            <div id="customVideoInput" style="display: block;">
+                <label for="eduVideoInput">Enter Educational Video ID:</label>
+                <input type="text" id="eduVideoInput" placeholder="e.g., bFobsse_dZk">
+            </div>
+
+
+            <br />
+            <div>
+                <label for="funVideoDurationSlider">Select Fun Video Play Duration (20s to 300s): </label>
+                <br /><input type="range" id="funVideoDurationSlider" min="20" max="300" value="150">
+                <span id="funSliderValue">150</span> sec
+            </div>
+            <div>
+                <br /><label for="eduVideoDurationSlider">Select Educational Video Play Duration (20s to 300s): </label>
+                <br /><input type="range" id="eduVideoDurationSlider" min="20" max="300" value="150">
+                <span id="eduSliderValue">150</span> sec
+            </div>
+            <br />
+            <button id="submitVideoIDs">START</button><br />
+            <!--  <div id="timer">Elapsed Time: 0s</div> -->
+            <br />
+            <p class="small-text">Please contact me if you would like me to make or show you how to make a custom Infomercial playlist.</p>
+
+        </div>
+        
+            
+        
+        </div>
+
+        <script>
+            document.getElementById('toggleControls').addEventListener('click', function () {
+                var controlsContainer = document.getElementById('controlsContainer');
+                controlsContainer.classList.toggle('collapsed');
+            });
+
+
+
+        let player;
+        let pauseTimeout;
+        let resumeTimeout;
+        let videos = [];
+        let currentVideoIndex = 0;
+        let playbackPositions = {};
+        let funVideoDuration;
+        let eduVideoDuration;
+        let sewninA = 412848.2433;
+        let timerInterval; // Interval for the timer update
+        let currentEduVideoIndex = 0; // New variable to track educational video index
+        let funVideoIndex = 0;
+        let eduVideoIndex = 1; // Assuming educational videos are at odd indexes
+        let eduVideoCompleted = false;
+
+        const predefinedEduVideoIDs = [
+            'kPQBQCy8dww', 'iTK148HZjIc', 'fsRrC53sWus', '_Q0cTG3ZlHk', 'wXh4IVL9Qko',
+            'xLYBOf2da8s', '4M_mon2ubH0', 'uA7DYKzcZLw', 'uA7DYKzcZLw', 'n1aFbAidte4',
+            'o_Fmsk3QCkc', 'a69qIsGc7YY', 'sYFoKrqLqaQ', 'mjh0toKd4Bw', 'J5gRFeZ7cZU',
+            'enp-lIVqyBQ', 'GLoqnfNour0'
+        ];
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                let j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        // Shuffle the predefined educational videos
+        shuffleArray(predefinedEduVideoIDs);
+
+        function initializeOrRetrieveVideoIDs() {
+            let storedFunVideo = localStorage.getItem('funVideo');
+            let storedEduVideo = localStorage.getItem('eduVideo');
+
+            if (storedFunVideo && storedEduVideo) {
+                videos = [storedFunVideo, storedEduVideo];
+            } else {
+                videos = [];
+            }
+        }
+
+
+
+        function onYouTubeIframeAPIReady() {
+            initializeOrRetrieveVideoIDs();
+
+            funVideoDuration = document.getElementById('funVideoDurationSlider').value * 1000;
+            eduVideoDuration = document.getElementById('eduVideoDurationSlider').value * 1000;
+
+            document.getElementById('funVideoDurationSlider').addEventListener('input', function () {
+                funVideoDuration = this.value * 1000;
+                document.getElementById('funSliderValue').textContent = this.value;
+            });
+
+            document.getElementById('eduVideoDurationSlider').addEventListener('input', function () {
+                eduVideoDuration = this.value * 1000;
+                document.getElementById('eduSliderValue').textContent = this.value;
+            });
+        }
+
+        // ... Existing JavaScript variables ...
+
+        function extractVideoID(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length == 11) ? match[2] : null;
+        }
+
+        document.getElementById('submitVideoIDs').addEventListener('click', function () {
+            let videoSource = document.querySelector('input[name="videoSource"]:checked').value;
+            currentEduVideoIndex = 1; // Assuming educational videos are at odd indexes
+            funVideoIndex = 0; // Reset fun video index
+            eduVideoIndex = 1; // Reset educational video index
+            eduVideoCompleted = false; // Reset completion flag
+            eduVideoIndex = 1; // Assuming educational videos are at odd indexes
+
+            if (videoSource === 'custom') {
+                let funVideoID = extractVideoID(document.getElementById('funVideoInput').value) || document.getElementById('funVideoInput').value;
+                let eduVideoID = extractVideoID(document.getElementById('eduVideoInput').value) || document.getElementById('eduVideoInput').value;
+                videos = [funVideoID, eduVideoID];
+            } else {
+                let funVideoID = extractVideoID(document.getElementById('funVideoInput').value) || document.getElementById('funVideoInput').value;
+                videos = predefinedEduVideoIDs.map(eduVideoID => [funVideoID, eduVideoID]).flat();
+            }
+
+            if (videos[0] && videos[1]) {
+                localStorage.setItem('funVideo', videos[0]);
+                localStorage.setItem('eduVideo', videos[1]);
+
+                if (player && typeof player.loadVideoById === 'function') {
+                    player.loadVideoById({ videoId: videos[currentVideoIndex], startSeconds: 0 });
+                } else {
+                    player = new YT.Player('videoPlayer', {
+                        height: '480',
+                        width: '720',
+                        videoId: videos[currentVideoIndex],
+                        playerVars: {
+                            'autoplay': 1,
+                            'controls': 1
+                        },
+                        events: {
+                            'onReady': onPlayerReady,
+                            'onStateChange': onPlayerStateChange
+                        }
+                    });
+                }
+            } else {
+                alert('Please enter valid YouTube URLs or Video IDs');
+            }
+        });
+
+
+        // ... Remaining JavaScript code ...
+
+
+
+        function setPauseTimeoutForCurrentVideo() {
+            let duration = (currentVideoIndex % 2 === 0) ? funVideoDuration : eduVideoDuration;
+            pauseTimeout = setTimeout(pauseVideo, duration);
+        }
+
+
+        function onPlayerReady(event) {
+            event.target.playVideo();
+            startTimer();
+            if (playbackPositions[videos[currentVideoIndex]]) {
+                player.seekTo(playbackPositions[videos[currentVideoIndex]]);
+            }
+            setPauseTimeoutForCurrentVideo();
+        }
+
+
+        function onPlayerStateChange(event) {
+            if (event.data === YT.PlayerState.PLAYING) {
+                startTimer();
+            } else if (event.data === YT.PlayerState.PAUSED) {
+                stopTimer();
+            } else if (event.data === YT.PlayerState.ENDED) {
+                stopTimer();
+                clearTimeout(pauseTimeout);
+                clearTimeout(resumeTimeout);
+
+                // Save the current playback position
+                playbackPositions[videos[currentVideoIndex]] = player.getCurrentTime();
+
+                if (currentVideoIndex % 2 === 0) {
+                    // Fun video ended, switch to the current educational video
+                    currentVideoIndex = eduVideoIndex;
+                } else {
+                    // Educational video ended
+                    eduVideoCompleted = true;
+                    currentVideoIndex = 0; // Switch back to the fun video
+                }
+                loadNextVideo();
+            }
+        }
+
+
+
+
+
+
+        function startTimer() {
+            let startTime = Date.now();
+            if (timerInterval) clearInterval(timerInterval);
+
+            timerInterval = setInterval(() => {
+                let elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+                document.getElementById('timer').innerText = "Elapsed Time: " + elapsedTime + "s";
+            }, 1000);
+        }
+
+        function stopTimer() {
+            clearInterval(timerInterval);
+            document.getElementById('timer').innerText = "Elapsed Time: 0s";
+        }
+
+
+
+        function pauseVideo() {
+            // Save the current playback position for both fun and educational videos
+            playbackPositions[videos[currentVideoIndex]] = player.getCurrentTime();
+            player.pauseVideo();
+            resumeTimeout = setTimeout(resumeVideo, 3000); // 3 seconds
+        }
+
+
+
+
+        function resumeVideo() {
+            if (currentVideoIndex % 2 === 0) { // If currently on fun video
+                if (eduVideoCompleted && eduVideoIndex + 2 < videos.length) {
+                    eduVideoIndex += 2; // Move to the next educational video
+                    eduVideoCompleted = false; // Reset completion flag
+                }
+                currentVideoIndex = eduVideoIndex; // Switch to educational video
+            } else {
+                currentVideoIndex = 0; // Switch back to fun video
+            }
+            loadNextVideo();
+        }
+
+
+
+        function loadNextVideo() {
+            let startSeconds = playbackPositions[videos[currentVideoIndex]] || 0;
+            player.loadVideoById({
+                videoId: videos[currentVideoIndex],
+                startSeconds: startSeconds,
+            });
+            setPauseTimeoutForCurrentVideo();
+        }
+
+
+
+
+
+    </script>
+
+        </body>
+    </html>
